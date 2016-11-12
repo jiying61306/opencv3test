@@ -24,38 +24,46 @@ int main(int argc, char** argv)
     // Set up Test data
     std::string xmlfilename;
     std::ifstream fin ;
-    if(argc != 3)
+    if(argc != 3){
       std::cout << "Please input test file path, xml\n"; 
+      return -1;
+    }
     else{
       fin.open(argv[1]);
       xmlfilename = argv[2];
     }
-    vector< vector<float>  > VecTestData;
+    vector<int> vectorlabel;
+    vector< vector<float> > VectrainingData;
     std::string line;
-    int seg = 10;
-    while(std::getline(fin, line)){//raw data format "length rawdata"
+    int seg = 11;
+    Mat trainingDataMat(0 , seg, CV_32FC1);
+    int a =0;
+    while(std::getline(fin, line)){//raw data format "label length rawdata"
       std::stringstream linestream(line);
-      int lengthdata;
+      int templabel, lengthdata;
+      linestream >> templabel;
       linestream >> lengthdata;
+      vectorlabel.push_back(templabel);
       vector<float> Vecsum;
       for (int k = 0; k < seg; ++k) {
         float sum=0;
         for (int i = k*lengthdata/seg; i < (k+1)*lengthdata/seg; ++i) {
           float dtemp;
           linestream >> dtemp;
-          sum+=dtemp;
+          sum+=(dtemp*(k-seg/2))*(dtemp*(k-seg/2));
         }
         Vecsum.push_back(sum);
+        /* std::cout << sum <<"    "<< a  << std::endl; */
       }
-      VecTestData.push_back(Vecsum);
+      Mat temp(1, seg, CV_32FC1);
+      memcpy(temp.data , Vecsum.data(), Vecsum.size()*sizeof(float));
+      trainingDataMat.push_back(temp);
+      a++;
     }
    
-    float **TestData = new float*[VecTestData.size()];
-    for (int i = 0; i < VecTestData.size(); ++i) {
-      TestData[i] = (float*)VecTestData.at(i).data();
-    }
 
-    Mat TestDataMat(VecTestData.size(), seg, CV_32FC1, TestData);
+    Mat labelsMat(vectorlabel.size(), 1, CV_32SC1);
+    memcpy(labelsMat.data, vectorlabel.data(), vectorlabel.size()*sizeof(int));
 
     // Set up SVM's parameters
 
@@ -65,9 +73,13 @@ int main(int argc, char** argv)
     //predict sampleMat
     //
     Mat res;
-    svm->predict(TestDataMat, res);
+    svm->predict(trainingDataMat, res);
     // Show the Test data
-    std::cout << res.size() << std::endl;
+
+    /* labelsMat.push_back(res); */
+    std:: cout <<"answer:" <<  labelsMat << std::endl;
+    std:: cout <<"result:\n" << res << std::endl;
+    float testfloat = 10;
     fin.close(); 
     return 0;
 }
